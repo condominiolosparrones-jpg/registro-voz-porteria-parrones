@@ -1,55 +1,5 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>Registro por voz</title>
-
-<style>
-body{
-font-family:Arial;
-max-width:700px;
-margin:auto;
-padding:20px;
-}
-
-input,textarea,button{
-width:100%;
-padding:12px;
-margin-top:10px;
-font-size:16px;
-}
-
-button{
-cursor:pointer;
-}
-
-#estado{
-margin-top:10px;
-font-weight:bold;
-}
-</style>
-
-</head>
-
-<body>
-
-<h2>Registro por voz</h2>
-
-<input id="condominio" placeholder="Condominio">
-
-<input id="guardia" placeholder="Guardia">
-
-<textarea id="texto" rows="5" placeholder="Aquí aparecerá la transcripción"></textarea>
-
-<button onclick="hablar()">🎤 Hablar</button>
-
-<button onclick="guardar()">💾 Guardar</button>
-
-<p id="estado"></p>
-
 <script>
-
-const SCRIPT_URL="https://script.google.com/macros/s/AKfycbxLfoGr0CFoFAcXGj7XDB0tYxcb5s7hLlZNhcOgN1kQzKAKg0HSVZPKOnyLAEsAv7ly6g/exec";
+const SCRIPT_URL="https://script.google.com/macros/s/AKfycbxLfoGr0CFoFAcXGj7XDBOtYxcb5s7hLIZNhcOgN1kQzKAKg0HSVZPKOnyLAEsAv7iy6g/exec";
 
 function hablar(){
 
@@ -60,24 +10,22 @@ alert("Tu navegador no soporta reconocimiento de voz");
 return;
 }
 
-const rec=new SR();
+const rec = new SR();
+rec.lang = "es-CL";
+rec.interimResults = false;
+rec.maxAlternatives = 1;
 
-rec.lang="es-CL";
-
-rec.onstart=function(){
-document.getElementById("estado").innerText="Escuchando...";
+rec.onstart = function(){
+document.getElementById("estado").innerText = "Escuchando...";
 };
 
-rec.onresult=function(e){
-
-document.getElementById("texto").value=e.results[0][0].transcript;
-
-document.getElementById("estado").innerText="Texto detectado";
-
+rec.onresult = function(e){
+document.getElementById("texto").value = e.results[0][0].transcript;
+document.getElementById("estado").innerText = "Texto detectado";
 };
 
-rec.onerror=function(e){
-document.getElementById("estado").innerText="Error: "+e.error;
+rec.onerror = function(e){
+document.getElementById("estado").innerText = "Error: " + e.error;
 };
 
 rec.start();
@@ -86,39 +34,51 @@ rec.start();
 
 async function guardar(){
 
-const payload={
-
-condominio:document.getElementById("condominio").value,
-
-guardia:document.getElementById("guardia").value,
-
-textoBruto:document.getElementById("texto").value
-
+const payload = {
+condominio: document.getElementById("condominio").value.trim(),
+guardia: document.getElementById("guardia").value.trim(),
+textoBruto: document.getElementById("texto").value.trim()
 };
 
-document.getElementById("estado").innerText="Guardando...";
+if(!payload.textoBruto){
+document.getElementById("estado").innerText = "No hay texto para guardar";
+return;
+}
+
+document.getElementById("estado").innerText = "Guardando...";
 
 try{
 
-const res=await fetch(SCRIPT_URL,{
+const res = await fetch(SCRIPT_URL,{
 method:"POST",
 headers:{
-"Content-Type":"text/plain"
+"Content-Type":"text/plain;charset=utf-8"
 },
-body:JSON.stringify(payload)
+body: JSON.stringify(payload)
 });
 
-document.getElementById("estado").innerText="Registro guardado";
+const raw = await res.text();
+
+let data;
+try{
+data = JSON.parse(raw);
+}catch(err){
+document.getElementById("estado").innerText = "Respuesta no válida del script: " + raw;
+return;
+}
+
+if(data.ok){
+document.getElementById("estado").innerText = "Registro guardado";
+document.getElementById("texto").value = "";
+}else{
+document.getElementById("estado").innerText = "Error del script: " + data.error;
+}
 
 }catch(e){
 
-document.getElementById("estado").innerText="Error al guardar";
+document.getElementById("estado").innerText = "Error al guardar: " + e.message;
 
 }
 
 }
-
 </script>
-
-</body>
-</html>
