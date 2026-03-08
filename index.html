@@ -1,71 +1,135 @@
-<script>
-const SCRIPT_URL="https://script.google.com/macros/s/AKfycbxLfoGr0CFoFAcXGj7XDBOtYxcb5s7hLIZNhcOgN1kQzKAKg0HSVZPKOnyLAEsAv7iy6g/exec";
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Registro por voz</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 720px;
+      margin: auto;
+      padding: 20px;
+    }
+    input, textarea, button {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      margin: 8px 0;
+      font-size: 16px;
+    }
+    button {
+      cursor: pointer;
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+    }
+    .row button {
+      flex: 1;
+    }
+    #estado {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .ok { color: green; }
+    .err { color: #b00020; }
+  </style>
+</head>
+<body>
+  <h2>Registro por voz</h2>
 
-function hablar(){
+  <input id="condominio" placeholder="Condominio">
+  <input id="guardia" placeholder="Guardia">
+  <textarea id="texto" rows="5" placeholder="Aquí aparecerá el texto detectado"></textarea>
 
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  <div class="row">
+    <button onclick="hablar()">🎤 Hablar</button>
+    <button onclick="guardar()">💾 Guardar</button>
+  </div>
 
-if(!SR){
-alert("Tu navegador no soporta reconocimiento de voz");
-return;
-}
+  <div id="estado"></div>
 
-const rec = new SR();
-rec.lang = "es-CL";
-rec.interimResults = false;
-rec.maxAlternatives = 1;
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxLfoGr0CFoFAcXGj7XDBOtYxcb5s7hLIZNhcOgN1kQzKAKg0HSVZPKOnyLAEsAv7iy6g/exec";
 
-rec.onstart = function(){
-document.getElementById("estado").innerText = "Escuchando...";
-};
+    function estado(msg, tipo = "") {
+      const el = document.getElementById("estado");
+      el.textContent = msg;
+      el.className = tipo;
+    }
 
-rec.onresult = function(e){
-document.getElementById("texto").value = e.results[0][0].transcript;
-document.getElementById("estado").innerText = "Texto detectado";
-};
+    function getParam(name) {
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name) || "";
+    }
 
-rec.onerror = function(e){
-document.getElementById("estado").innerText = "Error: " + e.error;
-};
+    window.onload = function () {
+      document.getElementById("condominio").value = getParam("condominio");
+      document.getElementById("guardia").value = getParam("guardia");
+    };
 
-rec.start();
+    function hablar() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-}
+      if (!SR) {
+        estado("Este navegador no soporta reconocimiento de voz. Usa Chrome.", "err");
+        return;
+      }
 
-async function guardar(){
+      const rec = new SR();
+      rec.lang = "es-CL";
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
 
-const payload = {
-condominio: document.getElementById("condominio").value.trim(),
-guardia: document.getElementById("guardia").value.trim(),
-textoBruto: document.getElementById("texto").value.trim()
-};
+      rec.onstart = function () {
+        estado("Escuchando...", "ok");
+      };
 
-if(!payload.textoBruto){
-document.getElementById("estado").innerText = "No hay texto para guardar";
-return;
-}
+      rec.onresult = function (e) {
+        const texto = e.results[0][0].transcript;
+        document.getElementById("texto").value = texto;
+        estado("Texto detectado.", "ok");
+      };
 
-document.getElementById("estado").innerText = "Enviando...";
+      rec.onerror = function (e) {
+        estado("Error de voz: " + e.error, "err");
+      };
 
-try{
+      rec.start();
+    }
 
-await fetch(SCRIPT_URL,{
-method:"POST",
-mode:"no-cors",
-headers:{
-"Content-Type":"text/plain;charset=utf-8"
-},
-body: JSON.stringify(payload)
-});
+    async function guardar() {
+      const payload = {
+        condominio: document.getElementById("condominio").value.trim(),
+        guardia: document.getElementById("guardia").value.trim(),
+        textoBruto: document.getElementById("texto").value.trim()
+      };
 
-document.getElementById("estado").innerText = "Registro enviado. Revisa la hoja en 2 a 5 segundos.";
-document.getElementById("texto").value = "";
+      if (!payload.textoBruto) {
+        estado("No hay texto para guardar.", "err");
+        return;
+      }
 
-}catch(e){
+      estado("Enviando...", "ok");
 
-document.getElementById("estado").innerText = "Error de red: " + e.message;
+      try {
+        await fetch(SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify(payload)
+        });
 
-}
+        estado("Registro enviado. Revisa la hoja en 2 a 5 segundos.", "ok");
+        document.getElementById("texto").value = "";
 
-}
-</script>
+      } catch (e) {
+        estado("Error de red: " + e.message, "err");
+      }
+    }
+  </script>
+</body>
+</html>
