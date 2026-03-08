@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Registro por voz</title>
+
+<style>
+body{
+font-family:Arial;
+max-width:700px;
+margin:auto;
+padding:20px;
+}
+
+input,textarea,button{
+width:100%;
+padding:12px;
+margin-top:10px;
+font-size:16px;
+}
+
+button{
+cursor:pointer;
+}
+
+#estado{
+margin-top:10px;
+font-weight:bold;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>Registro por voz</h2>
+
+<input id="condominio" placeholder="Condominio">
+
+<input id="guardia" placeholder="Guardia">
+
+<textarea id="texto" rows="5" placeholder="Aquí aparecerá la transcripción"></textarea>
+
+<button onclick="hablar()">🎤 Hablar</button>
+
+<button onclick="guardar()">💾 Guardar</button>
+
+<p id="estado"></p>
+
+<script>
+
+const SCRIPT_URL="PEGA_AQUI_TU_URL_APPS_SCRIPT";
+
+function hablar(){
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if(!SR){
+alert("Tu navegador no soporta reconocimiento de voz");
+return;
+}
+
+const rec=new SR();
+
+rec.lang="es-CL";
+
+rec.onstart=function(){
+document.getElementById("estado").innerText="Escuchando...";
+};
+
+rec.onresult=function(e){
+
+document.getElementById("texto").value=e.results[0][0].transcript;
+
+document.getElementById("estado").innerText="Texto detectado";
+
+};
+
+rec.onerror=function(e){
+document.getElementById("estado").innerText="Error: "+e.error;
+};
+
+rec.start();
+
+}
+
+async function guardar(){
+
+const payload={
+
+condominio:document.getElementById("condominio").value,
+
+guardia:document.getElementById("guardia").value,
+
+textoBruto:document.getElementById("texto").value
+
+};
+
+document.getElementById("estado").innerText="Guardando...";
+
+try{
+
+const res=await fetch(SCRIPT_URL,{
+method:"POST",
+headers:{
+"Content-Type":"text/plain"
+},
+body:JSON.stringify(payload)
+});
+
+document.getElementById("estado").innerText="Registro guardado";
+
+}catch(e){
+
+document.getElementById("estado").innerText="Error al guardar";
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
